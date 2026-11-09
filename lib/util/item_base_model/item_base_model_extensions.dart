@@ -35,6 +35,7 @@ import 'package:fladder/screens/metadata/refresh_metadata.dart';
 import 'package:fladder/screens/playlists/add_to_playlists.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/screens/syncing/sync_button.dart';
+import 'package:fladder/screens/trim/trim_screen.dart';
 import 'package:fladder/screens/syncing/sync_item_details.dart';
 import 'package:fladder/seerr/seerr_models.dart';
 import 'package:fladder/src/wallpaper_api.g.dart';
@@ -439,6 +440,12 @@ extension ItemBaseModelExtensions on ItemBaseModel {
                 tmdbId: tmdbId!));
           },
           label: Text(context.localized.seerrDetails),
+        ),
+      if (isAdmin && (type == FladderItemType.video || this is MovieModel))
+        ItemActionButton(
+          icon: const Icon(Icons.content_cut),
+          action: () => showTrimScreen(context, this),
+          label: const Text('Trim clip'),
         ),
       if (canDelete == true)
         ItemActionButton(
