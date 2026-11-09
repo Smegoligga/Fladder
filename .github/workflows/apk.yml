@@ -19,8 +19,13 @@ jobs:
           flutter-version: ${{ steps.fv.outputs.v }}
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --debug --split-per-abi --build-number=${{ github.run_number }} --flavor production
+      - name: Create throwaway signing key
+        run: |
+          PW=$(openssl rand -hex 16)
+          keytool -genkeypair -keystore android/app/keystore.jks -alias trimmod -keyalg RSA -keysize 2048 -validity 3650 -storepass "$PW" -keypass "$PW" -dname "CN=Fladder Trim Mod"
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=trimmod\n' "$PW" "$PW" > android/app/key.properties
+      - run: flutter build apk --release --target-platform android-arm64 --build-number=${{ github.run_number }} --flavor production
       - uses: actions/upload-artifact@v4
         with:
           name: fladder-trim-apk
-          path: build/app/outputs/flutter-apk/*-production-debug.apk
+          path: build/app/outputs/flutter-apk/*-production-release.apk
