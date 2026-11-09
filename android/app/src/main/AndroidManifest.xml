@@ -14,7 +14,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
-    <application android:label="Fladder" android:name="${applicationName}" android:icon="@mipmap/ic_launcher" android:banner="@drawable/app_banner" android:usesCleartextTraffic="true" android:enableOnBackInvokedCallback="true" android:largeHeap="true">
+    <application android:label="Fladder Trim" android:name="${applicationName}" android:icon="@mipmap/ic_launcher" android:banner="@drawable/app_banner" android:usesCleartextTraffic="true" android:enableOnBackInvokedCallback="true" android:largeHeap="true">
 
         <meta-data android:name="com.ryanheise.audioservice.notification_icon" android:resource="@drawable/ic_notification" />
 

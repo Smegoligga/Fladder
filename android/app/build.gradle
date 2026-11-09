@@ -111,7 +111,7 @@ android {
         }
         production {
             dimension "default"
-            applicationIdSuffix ""
+            applicationIdSuffix ".trim"
         }
     }
 }
