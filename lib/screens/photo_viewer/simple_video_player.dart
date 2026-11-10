@@ -15,6 +15,8 @@ import 'package:fladder/providers/settings/photo_view_settings_provider.dart';
 import 'package:fladder/providers/settings/video_player_settings_provider.dart';
 import 'package:fladder/providers/sync_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
+import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
+import 'package:fladder/screens/trim/trimmer_api.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/duration_extensions.dart';
 import 'package:fladder/util/fladder_image.dart';
@@ -41,6 +43,12 @@ class _SimpleVideoPlayerState extends ConsumerState<SimpleVideoPlayer> with Wind
     _ => LibMDK(),
   };
   late String videoUrl = "";
+  String originalUrl = "";
+
+  /// Data saver: play the small copy the server keeps of each clip instead of the original file.
+  bool dataSaver = false;
+  bool usingLite = false;
+  bool switchingQuality = false;
   final _videoKey = UniqueKey();
 
   bool playing = false;
@@ -111,6 +119,19 @@ class _SimpleVideoPlayerState extends ConsumerState<SimpleVideoPlayer> with Wind
             )?.toString() ??
             '';
 
+    originalUrl = videoUrl;
+    final isLocalFile = syncedVideo != null && syncedVideo.existsSync();
+    dataSaver = await TrimmerApi.dataSaver();
+    if (!mounted) return;
+    if (dataSaver && !isLocalFile) {
+      final lite = await (await TrimmerApi.of(ref))?.liteUrlFor(widget.video.id);
+      if (!mounted) return;
+      if (lite != null) {
+        videoUrl = lite;
+        usingLite = true;
+      }
+    }
+
     subscriptions.add(player.stateStream.listen((event) {
       setState(() {
         playing = event.playing;
@@ -123,6 +144,42 @@ class _SimpleVideoPlayerState extends ConsumerState<SimpleVideoPlayer> with Wind
     if (!mounted) return;
     await player.setVolume(settings.mute ? 0 : 100);
     await player.loop(settings.repeat);
+  }
+
+  Future<void> _toggleDataSaver() async {
+    if (switchingQuality) return;
+    switchingQuality = true;
+    try {
+      final want = !dataSaver;
+      await TrimmerApi.setDataSaver(want);
+      var next = originalUrl;
+      var lite = false;
+      if (want) {
+        final url = await (await TrimmerApi.of(ref))?.liteUrlFor(widget.video.id);
+        if (url != null) {
+          next = url;
+          lite = true;
+        }
+      }
+      if (!mounted) return;
+      final wasPlaying = player.lastState.playing;
+      final at = position;
+      setState(() {
+        dataSaver = want;
+        usingLite = lite;
+      });
+      if (next.isNotEmpty && next != videoUrl) {
+        videoUrl = next;
+        await player.loadVideo(videoUrl, wasPlaying, startPosition: at);
+      }
+      if (want && !lite) {
+        FladderSnack.show("The small copy of this clip isn't ready yet. Playing the original for now.");
+      } else {
+        FladderSnack.show(want ? "Data saver on: playing the small copy" : "Data saver off: playing the original");
+      }
+    } finally {
+      switchingQuality = false;
+    }
   }
 
   @override
@@ -226,7 +283,15 @@ class _SimpleVideoPlayerState extends ConsumerState<SimpleVideoPlayer> with Wind
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              tooltip: dataSaver
+                                  ? (usingLite ? "Data saver on" : "Data saver on (small copy not ready)")
+                                  : "Data saver off (original quality)",
+                              color: Theme.of(context).colorScheme.onSurface,
+                              onPressed: _toggleDataSaver,
+                              icon: Icon(dataSaver ? Icons.data_saver_on : Icons.hd_outlined),
+                            ),
                             IconButton(
                               color: Theme.of(context).colorScheme.onSurface,
                               onPressed: () async {

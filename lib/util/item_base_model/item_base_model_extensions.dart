@@ -444,7 +444,15 @@ extension ItemBaseModelExtensions on ItemBaseModel {
       if (isAdmin && (type == FladderItemType.video || this is MovieModel))
         ItemActionButton(
           icon: const Icon(Icons.content_cut),
-          action: () => showTrimScreen(context, this),
+          action: () async {
+            final deleted = await showTrimScreen(context, this);
+            if (deleted == true) {
+              onDeleteSuccesFully?.call(this);
+              if (context.mounted) {
+                context.refreshData();
+              }
+            }
+          },
           label: const Text('Trim clip'),
         ),
       if (canDelete == true)

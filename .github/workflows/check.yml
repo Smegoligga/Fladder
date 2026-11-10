@@ -1,0 +1,23 @@
+name: Check mod
+on:
+  workflow_dispatch:
+  push:
+    branches: [trim-mod]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Flutter version
+        id: fv
+        run: echo "v=$(python3 -c "import json;print(json.load(open('.fvmrc'))['flutter'])")" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.fv.outputs.v }}
+          cache: true
+      - run: flutter pub get
+      - name: Analyze the changed files (errors only)
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib/screens/trim lib/screens/photo_viewer/simple_video_player.dart lib/util/item_base_model/item_base_model_extensions.dart | tee analyze.txt
+          ! grep -E "^\s*error •" analyze.txt
